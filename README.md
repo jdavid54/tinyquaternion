@@ -41,7 +41,7 @@ import numpy as np
 
 ### 2.1 Define Quaternions
 
-In this package, there are two methods to define a quaternion:
+In this package, there are 3 methods to define a quaternion:
 
 1. using a 4D array representing the elements of a quaternion `q=[w,x,y,z]`. Define the array using numpy's `ndarray`.
 
@@ -61,7 +61,14 @@ q = Quaternion(a=np.pi/3, n=np.array([0.,0.,1.]))
 q
 Quaternion(0.8660254037844387, 0.0, 0.0, 0.49999999999999994)
 ```
+3. using euler angles representation. Euler angles are roll, pitch and yaw
 
+``` python
+q = Quaternion(roll=1, pitch=0, yaw=0)
+
+q
+Quaternion(0.8775825618903728, 0.479425538604203, 0.0, 0.0)
+```
 ### 2.2. Quaternion elements 
 
 Each quaternion is a vector `q=[w,x,y,z]` with four elements `w`, `x`, `y`, `z`. Each element of the quaternion can be retrieved as follows:
@@ -85,6 +92,8 @@ Example:
 0.49999999999999994
 >>> 
 ```
+
+A compatibility with scipy quaternions (x,y,z,w) is added as property scipy_q.
 
 ### 2.3. Scalar and Vector parts
 
@@ -202,6 +211,19 @@ Example:
 ```
 
 keep in mind that this is not equal to the original quaternion that we defined above. The main reason is that we have performed some operations on the original quaternion. 
+
+### 2.9 added. Make matrix from Quaternion
+
+Example:
+
+``` python
+q=Quaternion(roll=1, pitch=0, yaw=0)
+q.matrix()
+[[1.   ,  0.          ,   0.],
+[[1.   ,  0.54030231  ,  -0.84147098],
+[[1.   ,  0.84147098  ,   0.54030231 .]]
+
+``` 
 
 ### 2.10. Main operations 
 
