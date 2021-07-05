@@ -25,25 +25,72 @@ tinyQuaternion.py - This file defines the core Quaternion class
 """
 
 import numpy as np
+import math
 
 class Quaternion:
     """
     TinyQ
     a library for quaternion operations in Python """
 
-    def __init__(self, q=None, a=None, n=None):
+    def __init__(self, q=None, a=None, n=None, roll=None, pitch=None, yaw=None):
         # either q or (n,a) has to be given
+        # q = (w,x,y,z)
         if q is None:
-            # convert (n,a) to quaternion
-            self.q = np.concatenate(([np.cos(a/2)],n*np.sin(a/2)),axis=0)
+            if roll is None:
+                # convert (n,a) to quaternion
+                self.q = np.concatenate(([np.cos(a/2)],n*np.sin(a/2)),axis=0)
+            else:
+                # https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+                # convert euler angles (roll, pitch, yaw) to quaternion
+                # Abbreviations for the various angular functions
+                cy = np.cos(yaw * 0.5)
+                sy = np.sin(yaw * 0.5)
+                cp = np.cos(pitch * 0.5)
+                sp = np.sin(pitch * 0.5)
+                cr = np.cos(roll * 0.5)
+                sr = np.sin(roll * 0.5)
+                #Quaternion q;
+                w = cr * cp * cy + sr * sp * sy
+                x = sr * cp * cy - cr * sp * sy
+                y = cr * sp * cy + sr * cp * sy
+                z = cr * cp * sy - sr * sp * cy
+
+                self.q = (w,x,y,z)
         else:
             # self.q = q / np.dot(q,q)
             self.q = q
-            # convert q to (n,a) --- not used
-            #if n is None and a is None:
-            #    self.a = 2*np.arccos(self.q[0])
-            #    self.n = self.q[1:] / np.sin(self.a/2)
-
+            self.axisangle()
+        
+    @property
+    def scipy_q(self):
+        # scipy_q = (x,y,z,w)
+        # compatibilté scipy
+        return np.concatenate((self.q[1:],[self.q[0]]))
+             
+    @property
+    def euler_angles(self):
+        return self.ToEulerAngles()
+    
+    @property
+    def roll(self):
+        return self.euler_angles.roll
+    
+    @property
+    def pitch(self):
+        return self.euler_angles.pitch
+    
+    @property
+    def yaw(self):
+        return self.euler_angles.yaw
+        
+    @property
+    def matrix(self):
+        a,b,c,d = self.w, self.x, self.y, self.z
+        return np.array([
+            [a**2+b**2-c**2-d**2, 2*b*c-2*a*d, 2*a*c+2*b*d],
+            [2*a*d+2*b*c, a**2-b**2+c**2-d**2, 2*c*d-2*a*b],
+            [2*b*d-2*a*c, 2*a*b+2*c*d, a**2-b**2-c**2+d**2]])
+    
     @property
     def w(self):
         return self.q[0]
@@ -90,7 +137,6 @@ class Quaternion:
 
         return self.q
          
-
     @property
     def conjugate(self):
         ''' get conjugate of a quaternion '''
@@ -131,6 +177,40 @@ class Quaternion:
         self.n = self.q[1:] / np.sin(self.a/2)
         return self.n, self.a
 
+    def ToEulerAngles(self, degrees=False):
+        class EulerAngles():
+            def __init__(self):
+                self.roll = 0
+                self.pitch = 0
+                self.yaw = 0
+        
+        angles = EulerAngles()
+        w,x,y,z = self.w, self.x, self.y, self.z
+        #roll (x-axis rotation)
+        sinr_cosp = 2 * (w * x + y * z)
+        cosr_cosp = 1 - 2 * (x * x + y * y)
+        angles.roll = np.arctan2(sinr_cosp, cosr_cosp)
+
+        #pitch (y-axis rotation)
+        sinp = 2 * (w * y - z * x)
+        if abs(sinp) >= 1:
+            angles.pitch = math.copysign(np.pi / 2, sinp) # use 90 degrees if out of range
+        else:
+            angles.pitch = np.arcsin(sinp)
+
+        # yaw (z-axis rotation)
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        angles.yaw = np.arctan2(siny_cosp, cosy_cosp)
+        deg = 180/np.pi
+        if degrees:
+            angles.roll *= deg
+            angles.pitch *= deg
+            angles.yaw *= deg
+            return angles
+        else:
+            return angles  #(angles.roll, angles.pitch, angles.yaw)
+    
     #### OPERATIONS ####
     def add(self, other):
         return self.__class__(q = self.q + other.q)
@@ -169,9 +249,11 @@ class Quaternion:
         ''' the format in the command line, using repr() '''
         return "Quaternion({}, {}, {}, {})".format(repr(self.q[0]),repr(self.q[1]),repr(self.q[2]),repr(self.q[3]))
 
-'''
+
 if __name__ == "__main__":
     q1 = Quaternion(a=np.pi/3, n=np.array([0.,0.,1.]))
     p = np.array([1.,2.,-1.])
     print(q1.rotatePoint(p))
-'''
+    print(q1.ToEulerAngles(degrees=True).yaw)
+    print(q1.yaw)
+
