@@ -59,7 +59,8 @@ class Quaternion:
         else:
             # self.q = q / np.dot(q,q)
             self.q = q
-            self.axisangle()
+        
+        self.axisangle()
         
     @property
     def scipy_q(self):
